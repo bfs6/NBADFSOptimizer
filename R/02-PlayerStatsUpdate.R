@@ -59,7 +59,26 @@ get_data_from_url <- function(nba_url){
 
 
 ####Read in Data####
-##PlayerInfo
+##Common Team Info
+common_team_url <- "http://stats.nba.com/stats/commonTeamYears/?LeagueID=00"
+common_team_info <- 
+  common_team_url %>% 
+  get_data_from_url() %>% 
+  filter(max_year == 2020)
+
+##Team Game Log
+team_game_logs_prior <- dbReadTable(my_db, "team_game_logs", row.names = FALSE)
+team_game_log_base_url <- "http://stats.nba.com/stats/teamgamelog/?Season=2020-21&SeasonType=Regular%20Season&TeamID="
+team_game_log_urls <- paste0(team_game_log_base_url, common_team_info$team_id)
+team_game_logs <- 
+  team_game_log_urls %>%
+  map_dfr(~list(get_data_from_url(.), Sys.sleep(1)))
+team_game_logs_add <- 
+  team_game_logs %>% 
+  anti_join(team_game_logs_prior, by = c("game_id", "team_id"))
+dbWriteTable(my_db, "team_game_logs", team_game_logs_add, row.names = FALSE, append = TRUE)
+
+##Player Info
 players_url <- "http://stats.nba.com/stats/leaguedashplayerbiostats/?Season=2020-21&PerMode=Totals&LeagueID=00&SeasonType=Regular%20Season"
 player_info <-
   players_url %>% 
@@ -73,36 +92,50 @@ player_pt_shot_stats <-
   get_data_from_url()
 dbWriteTable(my_db, "player_pt_shot_stats", player_pt_shot_stats, row.names = FALSE, overwrite = TRUE)
 
-##Player Game Log
-player_game_log_urls <- paste0("http://stats.nba.com/stats/playergamelog/?Season=2020-21&SeasonType=Regular%20Season&PlayerID=", player_info$player_id)
-player_game_log_list <- list()
-for(i in seq_along(player_game_log_urls)){
-  print(i)
-  player_game_log_list[[i]] <- 
-    player_game_log_urls[i] %>% 
-    get_data_from_url()
-  Sys.sleep(0.1)
-}
-player_game_logs <- 
-  player_game_log_list %>% 
-  map_df(~bind_rows(.))
-dbWriteTable(my_db, "player_game_logs", player_game_logs, row.names = FALSE, overwrite = TRUE)
+# ##Player Game Log
+# player_game_logs_prior <- dbReadTable(my_db, "player_game_logs", row.namees = FALSE)
+# player_game_log_urls <- paste0("http://stats.nba.com/stats/playergamelog/?Season=2020-21&SeasonType=Regular%20Season&PlayerID=", player_info$player_id)
+# player_game_log_list <- list()
+# for(i in seq_along(player_game_log_urls)){
+#   print(i)
+#   player_game_log_list[[i]] <- 
+#     player_game_log_urls[i] %>% 
+#     get_data_from_url()
+#   Sys.sleep(1)
+# }
+# player_game_logs <- 
+#   player_game_log_list %>% 
+#   map_df(~bind_rows(.)) 
+# player_game_logs_add <- 
+#   player_game_logs %>% 
+#   anti_join(player_game_logs_prior, by = c("game_id", "player_id"))
+# dbWriteTable(my_db, "player_game_logs", player_game_logs_add, row.names = FALSE, append = TRUE)
 
 ##Player ID and Game ID
-player_game_ids <- 
-  player_game_logs %>% 
-  select(player_id, game_id) %>% 
+team_game_ids_add <- 
+  team_game_logs_add %>% 
+  select(team_id, game_id) %>% 
   distinct()
-game_ids <- 
-  player_game_ids %>% 
+game_ids_add <- 
+  team_game_ids_add %>% 
   select(game_id) %>% 
   arrange(game_id) %>%
   distinct() %>% 
   pull(game_id)
 
+
+# game_ids_add <- 
+#   team_game_logs_prior %>% 
+#   select(game_id) %>% 
+#   distinct() %>% 
+#   anti_join(schmeh %>% 
+#               select(game_id), by = "game_id") %>% 
+#   distinct() %>% 
+#   pull(game_id)
+
 ##Boxscore Advanced
 boxscore_advanced_base_url <- "http://stats.nba.com/stats/boxscoreadvancedv2/?StartPeriod=1&EndPeriod=12&startRange=0&endRange=2147483647&rangeType=0&GameID="
-boxscore_advanced_urls <- paste0(boxscore_advanced_base_url, game_ids)
+boxscore_advanced_urls <- paste0(boxscore_advanced_base_url, game_ids_add)
 boxscore_advanced_list <- list()
 for(i in seq_along(boxscore_advanced_urls)){
   print(i)
@@ -115,13 +148,13 @@ boxscore_advanced_df <-
   boxscore_advanced_list %>% 
   map_df(~bind_rows(.)) %>% 
   distinct()
-dbWriteTable(my_db, "boxscore_advanced_raw", boxscore_advanced_df, row.names = FALSE, overwrite = TRUE)
+dbWriteTable(my_db, "boxscore_advanced_raw", boxscore_advanced_df, row.names = FALSE, append = TRUE)
 
 ##Boxscore Four Factors
 boxscore_four_factors_base_url <- "http://stats.nba.com/stats/boxscorefourfactorsv2/?StartPeriod=1&EndPeriod=12&startRange=0&endRange=2147483647&rangeType=0&GameID="
-boxscore_four_factors_urls <- paste0(boxscore_four_factors_base_url, game_ids)
+boxscore_four_factors_urls <- paste0(boxscore_four_factors_base_url, game_ids_add)
 boxscore_four_factors_list <- list()
-for(i in seq_along(boxscore_four_factors_urls)[-c(1:375)]){
+for(i in seq_along(boxscore_four_factors_urls)){
   print(i)
   boxscore_four_factors_list[[i]] <- 
     boxscore_four_factors_urls[i] %>% 
@@ -132,11 +165,11 @@ boxscore_four_factors_df <-
   boxscore_four_factors_list %>% 
   map_df(~bind_rows(.)) %>% 
   distinct()
-dbWriteTable(my_db, "boxscore_four_factors_raw", boxscore_four_factors_df, row.names = FALSE, overwrite = TRUE)
+dbWriteTable(my_db, "boxscore_four_factors_raw", boxscore_four_factors_df, row.names = FALSE, append = TRUE)
 
 ##Box Score Miscellaneous
 boxscore_misc_base_url <- "http://stats.nba.com/stats/boxscoremiscv2/?StartPeriod=1&EndPeriod=12&startRange=0&endRange=2147483647&rangeType=0&GameID="
-boxscore_misc_urls <- paste0(boxscore_misc_base_url, game_ids)
+boxscore_misc_urls <- paste0(boxscore_misc_base_url, game_ids_add)
 boxscore_misc_list <- list()
 for(i in seq_along(boxscore_misc_urls)){
   print(i)
@@ -149,11 +182,11 @@ boxscore_misc_df <-
   boxscore_misc_list %>% 
   map_df(~bind_rows(.)) %>% 
   distinct()
-dbWriteTable(my_db, "boxscore_misc_raw", boxscore_misc_df, row.names = FALSE, overwrite = TRUE)
+dbWriteTable(my_db, "boxscore_misc_raw", boxscore_misc_df, row.names = FALSE, append = TRUE)
 
 ##Box Score Player Tracking
 boxscore_player_track_base_url <- "http://stats.nba.com/stats/boxscoreplayertrackv2/?GameID="
-boxscore_player_track_urls <- paste0(boxscore_player_track_base_url, game_ids)
+boxscore_player_track_urls <- paste0(boxscore_player_track_base_url, game_ids_add)
 boxscore_player_track_list <- list()
 for(i in seq_along(boxscore_player_track_urls)){
   print(i)
@@ -166,11 +199,11 @@ boxscore_player_track_df <-
   boxscore_player_track_list %>% 
   map_df(~bind_rows(.)) %>% 
   distinct()
-dbWriteTable(my_db, "boxscore_player_track_raw", boxscore_player_track_df, row.names = FALSE, overwrite = TRUE)
+dbWriteTable(my_db, "boxscore_player_track_raw", boxscore_player_track_df, row.names = FALSE, append = TRUE)
 
 ##Box Score Scoring
 boxscore_scoring_base_url <- "http://stats.nba.com/stats/boxscorescoringv2/?StartPeriod=1&EndPeriod=12&startRange=0&endRange=2147483647&rangeType=0&GameID="
-boxscore_scoring_urls <- paste0(boxscore_scoring_base_url, game_ids)
+boxscore_scoring_urls <- paste0(boxscore_scoring_base_url, game_ids_add)
 boxscore_scoring_list <- list()
 for(i in seq_along(boxscore_scoring_urls)){
   print(i)
@@ -183,11 +216,11 @@ boxscore_scoring_df <-
   boxscore_scoring_list %>% 
   map_df(~bind_rows(.)) %>% 
   distinct()
-dbWriteTable(my_db, "boxscore_scoring_raw", boxscore_scoring_df, row.names = FALSE, overwrite = TRUE)
+dbWriteTable(my_db, "boxscore_scoring_raw", boxscore_scoring_df, row.names = FALSE, append = TRUE)
 
 ##Box Score Traditional
 boxscore_traditional_base_url <- "http://stats.nba.com/stats/boxscoretraditionalv2/?StartPeriod=1&EndPeriod=12&startRange=0&endRange=2147483647&rangeType=0&GameID="
-boxscore_traditional_urls <- paste0(boxscore_traditional_base_url, game_ids)
+boxscore_traditional_urls <- paste0(boxscore_traditional_base_url, game_ids_add)
 boxscore_traditional_list <- list()
 for(i in seq_along(boxscore_traditional_urls)){
   print(i)
@@ -200,13 +233,13 @@ boxscore_traditional_df <-
   boxscore_traditional_list %>% 
   map_df(~bind_rows(.)) %>% 
   distinct()
-dbWriteTable(my_db, "boxscore_traditional_raw", boxscore_traditional_df, row.names = FALSE, overwrite = TRUE)
+dbWriteTable(my_db, "boxscore_traditional_raw", boxscore_traditional_df, row.names = FALSE, append = TRUE)
 
 ##Box Score Usage
 boxscore_usage_base_url <- "http://stats.nba.com/stats/boxscoreusagev2/?StartPeriod=1&EndPeriod=12&startRange=0&endRange=2147483647&rangeType=0&GameID="
-boxscore_usage_urls <- paste0(boxscore_usage_base_url, game_ids)
+boxscore_usage_urls <- paste0(boxscore_usage_base_url, game_ids_add)
 boxscore_usage_list <- list()
-for(i in seq_along(boxscore_usage_urls)[-c(1:295)]){
+for(i in seq_along(boxscore_usage_urls)){
   print(i)
   boxscore_usage_list[[i]] <- 
     boxscore_usage_urls[i] %>% 
@@ -217,5 +250,5 @@ boxscore_usage_df <-
   boxscore_usage_list %>% 
   map_df(~bind_rows(.)) %>% 
   distinct()
-dbWriteTable(my_db, "boxscore_usage_raw", boxscore_usage_df, row.names = FALSE, overwrite = TRUE)
+dbWriteTable(my_db, "boxscore_usage_raw", boxscore_usage_df, row.names = FALSE, append = TRUE)
 
