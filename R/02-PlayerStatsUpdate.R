@@ -135,120 +135,272 @@ game_ids_add <-
 
 ##Boxscore Advanced
 boxscore_advanced_base_url <- "http://stats.nba.com/stats/boxscoreadvancedv2/?StartPeriod=1&EndPeriod=12&startRange=0&endRange=2147483647&rangeType=0&GameID="
-boxscore_advanced_urls <- paste0(boxscore_advanced_base_url, game_ids_add)
-boxscore_advanced_list <- list()
-for(i in seq_along(boxscore_advanced_urls)){
-  print(i)
-  boxscore_advanced_list[[i]] <- 
-    boxscore_advanced_urls[i] %>% 
-    get_data_from_url()
-  Sys.sleep(0.1)
+boxscore_advanced_previous <- dbReadTable(my_db, "boxscore_advanced_raw")
+boxscore_advanced_games_to_add <- 
+  team_game_logs %>% 
+  select(team_id, game_id) %>% 
+  distinct() %>% 
+  anti_join(boxscore_advanced_previous %>% 
+              select(team_id, game_id) %>% 
+              distinct(),
+            by = c("game_id", "team_id")) %>% 
+  select(game_id) %>% 
+  distinct() %>% 
+  pull(game_id)
+if(length(boxscore_advanced_games_to_add) > 0){
+  boxscore_advanced_urls <- paste0(boxscore_advanced_base_url, boxscore_advanced_games_to_add)
+  boxscore_advanced_list <- list()
+  for(i in seq_along(boxscore_advanced_urls)){
+    print(i)
+    boxscore_advanced_list[[i]] <- 
+      boxscore_advanced_urls[i] %>% 
+      get_data_from_url()
+    Sys.sleep(0.1)
+  }
+  boxscore_advanced_df <-
+    boxscore_advanced_list %>% 
+    map_df(~bind_rows(.)) %>% 
+    distinct()
+  dbWriteTable(my_db, "boxscore_advanced_raw", boxscore_advanced_df, row.names = FALSE, append = TRUE)
 }
-boxscore_advanced_df <-
-  boxscore_advanced_list %>% 
-  map_df(~bind_rows(.)) %>% 
-  distinct()
-dbWriteTable(my_db, "boxscore_advanced_raw", boxscore_advanced_df, row.names = FALSE, append = TRUE)
 
 ##Boxscore Four Factors
 boxscore_four_factors_base_url <- "http://stats.nba.com/stats/boxscorefourfactorsv2/?StartPeriod=1&EndPeriod=12&startRange=0&endRange=2147483647&rangeType=0&GameID="
-boxscore_four_factors_urls <- paste0(boxscore_four_factors_base_url, game_ids_add)
-boxscore_four_factors_list <- list()
-for(i in seq_along(boxscore_four_factors_urls)){
-  print(i)
-  boxscore_four_factors_list[[i]] <- 
-    boxscore_four_factors_urls[i] %>% 
-    get_data_from_url()
-  Sys.sleep(0.1)
+boxscore_four_factors_previous <- dbReadTable(my_db, "boxscore_four_factors_raw")
+boxscore_four_factors_games_to_add <- 
+  team_game_logs %>% 
+  select(team_id, game_id) %>% 
+  distinct() %>% 
+  anti_join(boxscore_four_factors_previous %>% 
+              select(team_id, game_id) %>% 
+              distinct(),
+            by = c("game_id", "team_id")) %>% 
+  select(game_id) %>% 
+  distinct() %>% 
+  pull(game_id)
+if(length(boxscore_four_factors_games_to_add) > 0){
+  boxscore_four_factors_urls <- paste0(boxscore_four_factors_base_url, boxscore_four_factors_games_to_add)
+  boxscore_four_factors_list <- list()
+  for(i in seq_along(boxscore_four_factors_urls)){
+    print(i)
+    boxscore_four_factors_list[[i]] <- 
+      boxscore_four_factors_urls[i] %>% 
+      get_data_from_url()
+    Sys.sleep(0.1)
+  }
+  boxscore_four_factors_df <-
+    boxscore_four_factors_list %>% 
+    map_df(~bind_rows(.)) %>% 
+    distinct()
+  dbWriteTable(my_db, "boxscore_four_factors_raw", boxscore_four_factors_df, row.names = FALSE, append = TRUE)
 }
-boxscore_four_factors_df <-
-  boxscore_four_factors_list %>% 
-  map_df(~bind_rows(.)) %>% 
-  distinct()
-dbWriteTable(my_db, "boxscore_four_factors_raw", boxscore_four_factors_df, row.names = FALSE, append = TRUE)
 
 ##Box Score Miscellaneous
 boxscore_misc_base_url <- "http://stats.nba.com/stats/boxscoremiscv2/?StartPeriod=1&EndPeriod=12&startRange=0&endRange=2147483647&rangeType=0&GameID="
-boxscore_misc_urls <- paste0(boxscore_misc_base_url, game_ids_add)
-boxscore_misc_list <- list()
-for(i in seq_along(boxscore_misc_urls)){
-  print(i)
-  boxscore_misc_list[[i]] <- 
-    boxscore_misc_urls[i] %>% 
-    get_data_from_url()
-  Sys.sleep(0.1)
+boxscore_misc_previous <- dbReadTable(my_db, "boxscore_misc_raw")
+boxscore_misc_games_to_add <- 
+  team_game_logs %>% 
+  select(team_id, game_id) %>% 
+  distinct() %>% 
+  anti_join(boxscore_misc_previous %>% 
+              select(team_id, game_id) %>% 
+              distinct(),
+            by = c("game_id", "team_id")) %>% 
+  select(game_id) %>% 
+  distinct() %>% 
+  pull(game_id)
+if(length(boxscore_misc_games_to_add) > 0){
+  boxscore_misc_urls <- paste0(boxscore_misc_base_url, boxscore_misc_games_to_add)
+  boxscore_misc_list <- list()
+  for(i in seq_along(boxscore_misc_urls)){
+    print(i)
+    boxscore_misc_list[[i]] <- 
+      boxscore_misc_urls[i] %>% 
+      get_data_from_url()
+    Sys.sleep(0.1)
+  }
+  boxscore_misc_df <-
+    boxscore_misc_list %>% 
+    map_df(~bind_rows(.)) %>% 
+    distinct()
+  dbWriteTable(my_db, "boxscore_misc_raw", boxscore_misc_df, row.names = FALSE, append = TRUE)
 }
-boxscore_misc_df <-
-  boxscore_misc_list %>% 
-  map_df(~bind_rows(.)) %>% 
-  distinct()
-dbWriteTable(my_db, "boxscore_misc_raw", boxscore_misc_df, row.names = FALSE, append = TRUE)
 
 ##Box Score Player Tracking
 boxscore_player_track_base_url <- "http://stats.nba.com/stats/boxscoreplayertrackv2/?GameID="
-boxscore_player_track_urls <- paste0(boxscore_player_track_base_url, game_ids_add)
-boxscore_player_track_list <- list()
-for(i in seq_along(boxscore_player_track_urls)){
-  print(i)
-  boxscore_player_track_list[[i]] <- 
-    boxscore_player_track_urls[i] %>% 
-    get_data_from_url()
-  Sys.sleep(0.1)
+boxscore_player_track_previous <- dbReadTable(my_db, "boxscore_player_track_raw")
+boxscore_player_track_games_to_add <- 
+  team_game_logs %>% 
+  select(team_id, game_id) %>% 
+  distinct() %>% 
+  anti_join(boxscore_player_track_previous %>% 
+              select(team_id, game_id) %>% 
+              distinct(),
+            by = c("game_id", "team_id")) %>% 
+  select(game_id) %>% 
+  distinct() %>% 
+  pull(game_id)
+if(length(boxscore_player_track_games_to_add) > 0){
+  boxscore_player_track_urls <- paste0(boxscore_player_track_base_url, boxscore_player_track_games_to_add)
+  boxscore_player_track_list <- list()
+  for(i in seq_along(boxscore_player_track_urls)){
+    print(i)
+    boxscore_player_track_list[[i]] <- 
+      boxscore_player_track_urls[i] %>% 
+      get_data_from_url()
+    Sys.sleep(0.1)
+  }
+  boxscore_player_track_df <-
+    boxscore_player_track_list %>% 
+    map_df(~bind_rows(.)) %>% 
+    distinct()
+  dbWriteTable(my_db, "boxscore_player_track_raw", boxscore_player_track_df, row.names = FALSE, append = TRUE)
 }
-boxscore_player_track_df <-
-  boxscore_player_track_list %>% 
-  map_df(~bind_rows(.)) %>% 
-  distinct()
-dbWriteTable(my_db, "boxscore_player_track_raw", boxscore_player_track_df, row.names = FALSE, append = TRUE)
 
 ##Box Score Scoring
 boxscore_scoring_base_url <- "http://stats.nba.com/stats/boxscorescoringv2/?StartPeriod=1&EndPeriod=12&startRange=0&endRange=2147483647&rangeType=0&GameID="
-boxscore_scoring_urls <- paste0(boxscore_scoring_base_url, game_ids_add)
-boxscore_scoring_list <- list()
-for(i in seq_along(boxscore_scoring_urls)){
-  print(i)
-  boxscore_scoring_list[[i]] <- 
-    boxscore_scoring_urls[i] %>% 
-    get_data_from_url()
-  Sys.sleep(0.1)
+boxscore_scoring_previous <- dbReadTable(my_db, "boxscore_scoring_raw")
+boxscore_scoring_games_to_add <- 
+  team_game_logs %>% 
+  select(team_id, game_id) %>% 
+  distinct() %>% 
+  anti_join(boxscore_scoring_previous %>% 
+              select(team_id, game_id) %>% 
+              distinct(),
+            by = c("game_id", "team_id")) %>% 
+  select(game_id) %>% 
+  distinct() %>% 
+  pull(game_id)
+if(length(boxscore_scoring_games_to_add) > 0){
+  boxscore_scoring_urls <- paste0(boxscore_scoring_base_url, boxscore_scoring_games_to_add)
+  boxscore_scoring_list <- list()
+  for(i in seq_along(boxscore_scoring_urls)){
+    print(i)
+    boxscore_scoring_list[[i]] <- 
+      boxscore_scoring_urls[i] %>% 
+      get_data_from_url()
+    Sys.sleep(0.1)
+  }
+  boxscore_scoring_df <-
+    boxscore_scoring_list %>% 
+    map_df(~bind_rows(.)) %>% 
+    distinct()
+  dbWriteTable(my_db, "boxscore_scoring_raw", boxscore_scoring_df, row.names = FALSE, append = TRUE)
 }
-boxscore_scoring_df <-
-  boxscore_scoring_list %>% 
-  map_df(~bind_rows(.)) %>% 
-  distinct()
-dbWriteTable(my_db, "boxscore_scoring_raw", boxscore_scoring_df, row.names = FALSE, append = TRUE)
 
 ##Box Score Traditional
 boxscore_traditional_base_url <- "http://stats.nba.com/stats/boxscoretraditionalv2/?StartPeriod=1&EndPeriod=12&startRange=0&endRange=2147483647&rangeType=0&GameID="
-boxscore_traditional_urls <- paste0(boxscore_traditional_base_url, game_ids_add)
-boxscore_traditional_list <- list()
-for(i in seq_along(boxscore_traditional_urls)){
-  print(i)
-  boxscore_traditional_list[[i]] <- 
-    boxscore_traditional_urls[i] %>% 
-    get_data_from_url()
-  Sys.sleep(0.1)
+boxscore_traditional_previous <- dbReadTable(my_db, "boxscore_traditional_raw")
+boxscore_traditional_games_to_add <- 
+  team_game_logs %>% 
+  select(team_id, game_id) %>% 
+  distinct() %>% 
+  anti_join(boxscore_traditional_previous %>% 
+              select(team_id, game_id) %>% 
+              distinct(),
+            by = c("game_id", "team_id")) %>% 
+  select(game_id) %>% 
+  distinct() %>% 
+  pull(game_id)
+if(length(boxscore_traditional_games_to_add) > 0){
+  boxscore_traditional_urls <- paste0(boxscore_traditional_base_url, boxscore_traditional_games_to_add)
+  boxscore_traditional_list <- list()
+  for(i in seq_along(boxscore_traditional_urls)){
+    print(i)
+    boxscore_traditional_list[[i]] <- 
+      boxscore_traditional_urls[i] %>% 
+      get_data_from_url()
+    Sys.sleep(0.1)
+  }
+  boxscore_traditional_df <-
+    boxscore_traditional_list %>% 
+    map_df(~bind_rows(.)) %>% 
+    distinct()
+  dbWriteTable(my_db, "boxscore_traditional_raw", boxscore_traditional_df, row.names = FALSE, append = TRUE)
 }
-boxscore_traditional_df <-
-  boxscore_traditional_list %>% 
-  map_df(~bind_rows(.)) %>% 
-  distinct()
-dbWriteTable(my_db, "boxscore_traditional_raw", boxscore_traditional_df, row.names = FALSE, append = TRUE)
 
 ##Box Score Usage
 boxscore_usage_base_url <- "http://stats.nba.com/stats/boxscoreusagev2/?StartPeriod=1&EndPeriod=12&startRange=0&endRange=2147483647&rangeType=0&GameID="
-boxscore_usage_urls <- paste0(boxscore_usage_base_url, game_ids_add)
-boxscore_usage_list <- list()
-for(i in seq_along(boxscore_usage_urls)){
-  print(i)
-  boxscore_usage_list[[i]] <- 
-    boxscore_usage_urls[i] %>% 
-    get_data_from_url()
-  Sys.sleep(0.1)
+boxscore_usage_previous <- dbReadTable(my_db, "boxscore_usage_raw")
+boxscore_usage_games_to_add <- 
+  team_game_logs %>% 
+  select(team_id, game_id) %>% 
+  distinct() %>% 
+  anti_join(boxscore_usage_previous %>% 
+              select(team_id, game_id) %>% 
+              distinct(),
+            by = c("game_id", "team_id")) %>% 
+  select(game_id) %>% 
+  distinct() %>% 
+  pull(game_id)
+if(length(boxscore_usage_games_to_add) > 0){
+  boxscore_usage_urls <- paste0(boxscore_usage_base_url, boxscore_usage_games_to_add)
+  boxscore_usage_list <- list()
+  for(i in seq_along(boxscore_usage_urls)){
+    print(i)
+    boxscore_usage_list[[i]] <- 
+      boxscore_usage_urls[i] %>% 
+      get_data_from_url()
+    Sys.sleep(0.1)
+  }
+  boxscore_usage_df <-
+    boxscore_usage_list %>% 
+    map_df(~bind_rows(.)) %>% 
+    distinct()
+  dbWriteTable(my_db, "boxscore_usage_raw", boxscore_usage_df, row.names = FALSE, append = TRUE)
 }
-boxscore_usage_df <-
-  boxscore_usage_list %>% 
-  map_df(~bind_rows(.)) %>% 
-  distinct()
-dbWriteTable(my_db, "boxscore_usage_raw", boxscore_usage_df, row.names = FALSE, append = TRUE)
+
+
+####Merge Tables####
+##Read in All Player Tables
+boxscore_tables <- 
+  my_db %>% 
+  dbListTables() %>% 
+  str_subset("^boxscore") %>% 
+  map(~dbReadTable(my_db, .) %>% 
+        mutate_all(~na_if(., "")))
+
+##Merge All Boxscore Tables
+full_player_boxscore_data <- 
+  boxscore_tables %>%
+  reduce(left_join, by = c("player_id", "game_id", "team_id", 
+                           "team_abbreviation", "team_city", "player_name",
+                           "start_position", "comment", "min")) %>% 
+  rename_at(
+    vars(ends_with(".x")),
+    ~str_replace(., "\\..$", "")) %>%
+  select(-ends_with(".y"))
+
+##Merge in Player and Team Tables
+player_info_merge <- 
+  player_info %>% 
+  select(-c(player_name, team_abbreviation, college, country,
+            draft_year, draft_round, draft_number, player_height)) %>% 
+  rename_at(vars(c(pts, reb, ast, net_rating), ends_with("_pct")),
+            ~paste(., "season", sep = "_"))
+
+player_pt_shot_stats_merge <- 
+  player_pt_shot_stats %>% 
+  select(-c(player_name, player_last_team_id, player_last_team_abbreviation, age, gp, g, fga_frequency)) %>% 
+  rename_at(vars(-player_id), 
+            ~paste(., "season", sep = "_"))
+
+team_game_logs_merge <- 
+  team_game_logs %>% 
+  select(-c(game_date, matchup, w, l, min)) %>% 
+  rename_at(vars(-c(team_id, game_id)),
+            ~paste(., "game_team", sep = "_"))
+
+full_player_boxscore_data_final <- 
+  full_player_boxscore_data %>% 
+  left_join(player_info_merge, by = c("team_id", "player_id")) %>% 
+  left_join(player_pt_shot_stats_merge, by = "player_id") %>% 
+  left_join(team_game_logs_merge, by = c("team_id", "game_id"))
+
+dbWriteTable(my_db, "full_player_boxscore_data", full_player_boxscore_data_final, row.names = FALSE, overwrite = TRUE)
+
+
+
+
+
 
