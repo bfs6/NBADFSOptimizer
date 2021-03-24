@@ -92,25 +92,6 @@ player_pt_shot_stats <-
   get_data_from_url()
 dbWriteTable(my_db, "player_pt_shot_stats", player_pt_shot_stats, row.names = FALSE, overwrite = TRUE)
 
-# ##Player Game Log
-# player_game_logs_prior <- dbReadTable(my_db, "player_game_logs", row.namees = FALSE)
-# player_game_log_urls <- paste0("http://stats.nba.com/stats/playergamelog/?Season=2020-21&SeasonType=Regular%20Season&PlayerID=", player_info$player_id)
-# player_game_log_list <- list()
-# for(i in seq_along(player_game_log_urls)){
-#   print(i)
-#   player_game_log_list[[i]] <- 
-#     player_game_log_urls[i] %>% 
-#     get_data_from_url()
-#   Sys.sleep(1)
-# }
-# player_game_logs <- 
-#   player_game_log_list %>% 
-#   map_df(~bind_rows(.)) 
-# player_game_logs_add <- 
-#   player_game_logs %>% 
-#   anti_join(player_game_logs_prior, by = c("game_id", "player_id"))
-# dbWriteTable(my_db, "player_game_logs", player_game_logs_add, row.names = FALSE, append = TRUE)
-
 ##Player ID and Game ID
 team_game_ids_add <- 
   team_game_logs_add %>% 
@@ -122,16 +103,6 @@ game_ids_add <-
   arrange(game_id) %>%
   distinct() %>% 
   pull(game_id)
-
-
-# game_ids_add <- 
-#   team_game_logs_prior %>% 
-#   select(game_id) %>% 
-#   distinct() %>% 
-#   anti_join(schmeh %>% 
-#               select(game_id), by = "game_id") %>% 
-#   distinct() %>% 
-#   pull(game_id)
 
 ##Boxscore Advanced
 boxscore_advanced_base_url <- "http://stats.nba.com/stats/boxscoreadvancedv2/?StartPeriod=1&EndPeriod=12&startRange=0&endRange=2147483647&rangeType=0&GameID="
